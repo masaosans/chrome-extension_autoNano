@@ -1,0 +1,19 @@
+{
+  "manifest_version": 3,
+  "name": "Stable Local Browser Agent",
+  "version": "1.0",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "debugger",
+    "storage",
+    "tabs"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_side_panel": "sidebar.html"
+  }
+}
