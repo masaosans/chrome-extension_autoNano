@@ -1,3 +1,4 @@
+// DOMが安定するまで待機する関数
 export async function waitForDomStable(tabId) {
   return chrome.scripting.executeScript({
     target: { tabId },
@@ -26,7 +27,7 @@ export async function waitForDomStable(tabId) {
   });
 }
 
-//リトライ処理
+// リトライ処理を行う関数
 export async function retryAction(tabId, action, executeFn) {
   for (let i = 0; i < 3; i++) {
     const result = await executeFn(tabId, action);
@@ -38,13 +39,15 @@ export async function retryAction(tabId, action, executeFn) {
   return { error: true };
 }
 
+// 失敗を判定する関数
 function isFailure(result) {
   if (!result) return true;
   if (result.error) return true;
   if (result[0]?.result === "not found") return true;
   return false;
 }
-//ループ検出
+
+// ループ検出を行う関数
 export function detectLoop(memory) {
   const recent = memory.history.slice(-6);
   const signatures = recent.map(
@@ -52,4 +55,3 @@ export function detectLoop(memory) {
   );
   return new Set(signatures).size <= 2;
 }
-

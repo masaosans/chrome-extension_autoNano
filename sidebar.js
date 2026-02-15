@@ -1,3 +1,4 @@
+// サイドバーの実行ボタンにクリックイベントを追加
 document.getElementById("run").onclick = async () => {
   const prompt = document.getElementById("prompt").value.trim();
   if (!prompt) return;
@@ -11,6 +12,7 @@ document.getElementById("run").onclick = async () => {
   });
 };
 
+// メッセージリスナー
 chrome.runtime.onMessage.addListener((msg) => {
   if (msg.type === "LOG") {
     const log = document.getElementById("log");

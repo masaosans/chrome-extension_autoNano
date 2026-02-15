@@ -2,6 +2,7 @@ import { AgentMemory } from "./memory.js";
 import { runNano } from "./nano.js";
 import { waitForDomStable, retryAction, detectLoop } from "./utils.js";
 
+// メッセージリスナー
 chrome.runtime.onMessage.addListener(async (msg) => {
   if (msg.type !== "START_AGENT") return;
 
@@ -51,7 +52,7 @@ chrome.runtime.onMessage.addListener(async (msg) => {
   log("Finished.");
 });
 
-//AXTreeっぽいもの取得
+// AXTreeを取得する関数
 async function getAXTree(tabId) {
   try {
     await chrome.debugger.attach({ tabId }, "1.3");
@@ -73,7 +74,7 @@ async function getAXTree(tabId) {
     .slice(0, 200);
 }
 
-//Action実行
+// アクションを実行する関数
 async function executeAction(tabId, action) {
 
   if (action.type === "navigate") {
@@ -116,7 +117,7 @@ async function executeAction(tabId, action) {
   });
 }
 
-//プロンプトビルダー
+// プロンプトを構築する関数
 function buildPrompt(userPrompt, axTree, memory) {
   return `
 あなたはブラウザ自動操作エージェントです。
@@ -142,6 +143,7 @@ click, input, scroll, navigate, extract, wait, finish
 `;
 }
 
+// ログ出力を行う関数
 function log(text) {
   chrome.runtime.sendMessage({ type: "LOG", data: text });
 }

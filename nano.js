@@ -1,3 +1,4 @@
+// Nanoモデルを使ってプロンプトを処理する関数
 export async function runNano(prompt) {
   try {
     const response = await window.ai.generate({
