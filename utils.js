@@ -49,9 +49,16 @@ function isFailure(result) {
 
 // ループ検出を行う関数
 export function detectLoop(memory) {
+
+  if (memory.history.length < 6) {
+    return false; // まずは十分な履歴がないと判定しない
+  }
+
   const recent = memory.history.slice(-6);
+
   const signatures = recent.map(
     h => h.action.type + (h.action.selector || "")
   );
+
   return new Set(signatures).size <= 2;
 }

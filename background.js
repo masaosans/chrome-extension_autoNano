@@ -2,6 +2,11 @@ import { AgentMemory } from "./memory.js";
 import { runNano } from "./nano.js";
 import { waitForDomStable, retryAction, detectLoop } from "./utils.js";
 
+//サイドパネル有効化
+chrome.runtime.onInstalled.addListener(() => {
+  chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
+});
+
 // メッセージリスナー
 chrome.runtime.onMessage.addListener(async (msg) => {
   if (msg.type !== "START_AGENT") return;

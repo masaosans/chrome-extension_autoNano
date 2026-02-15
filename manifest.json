@@ -7,13 +7,15 @@
     "scripting",
     "debugger",
     "storage",
-    "tabs"
+    "tabs",
+    "sidePanel"
   ],
   "background": {
     "service_worker": "background.js",
     "type": "module"
   },
-  "action": {
-    "default_side_panel": "sidebar.html"
+  "action": {},
+  "side_panel": {
+    "default_path": "sidebar.html"
   }
 }
