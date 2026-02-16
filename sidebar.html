@@ -4,15 +4,21 @@
 <meta charset="utf-8">
 <style>
 body { font-family: sans-serif; padding: 10px; }
-textarea { width: 100%; height: 120px; }
+textarea { width: 100%; height: 100px; }
 button { margin-top: 10px; width: 100%; }
+.status { margin-top: 10px; font-weight: bold; }
 pre { margin-top: 10px; background: #eee; padding: 10px; height: 250px; overflow: auto; }
 </style>
 </head>
 <body>
+
 <textarea id="prompt" placeholder="例: 新着記事の最新10件を取得して"></textarea>
 <button id="run">実行</button>
+
+<div class="status" id="status">AI状態: 未確認</div>
+
 <pre id="log"></pre>
+
 <script src="sidebar.js"></script>
 </body>
 </html>

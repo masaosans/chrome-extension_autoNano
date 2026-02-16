@@ -1,4 +1,6 @@
-// サイドバーの実行ボタンにクリックイベントを追加
+const statusEl = document.getElementById("status");
+const logEl = document.getElementById("log");
+
 document.getElementById("run").onclick = async () => {
   const prompt = document.getElementById("prompt").value.trim();
   if (!prompt) return;
@@ -12,11 +14,13 @@ document.getElementById("run").onclick = async () => {
   });
 };
 
-// メッセージリスナー
 chrome.runtime.onMessage.addListener((msg) => {
   if (msg.type === "LOG") {
-    const log = document.getElementById("log");
-    log.textContent += msg.data + "\n";
-    log.scrollTop = log.scrollHeight;
+    logEl.textContent += msg.data + "\n";
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  if (msg.type === "AI_STATUS") {
+    statusEl.textContent = "AI状態: " + msg.data;
   }
 });

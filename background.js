@@ -1,64 +1,110 @@
-import { AgentMemory } from "./memory.js";
-import { runNano } from "./nano.js";
-import { waitForDomStable, retryAction, detectLoop } from "./utils.js";
+import { ensureModelReady, runPrompt } from "./ai.js";
+import { waitForDomStable } from "./utils.js";
 
-//サイドパネル有効化
+/*
+  Background:
+  - エージェント制御本体
+  - AI呼び出し
+  - AX取得
+  - Action実行
+  - ログ出力管理
+*/
+
 chrome.runtime.onInstalled.addListener(() => {
   chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
 });
 
-// メッセージリスナー
+// メインエージェント起動
 chrome.runtime.onMessage.addListener(async (msg) => {
+
   if (msg.type !== "START_AGENT") return;
 
-  const memory = new AgentMemory(msg.prompt);
   const tabId = msg.tabId;
 
-  for (let step = 0; step < 50; step++) {
+  const log = (text) =>
+    chrome.runtime.sendMessage({ type: "LOG", data: text });
 
-    const tab = await chrome.tabs.get(tabId);
-    const url = tab.url;
+  const notify = (text) =>
+    chrome.runtime.sendMessage({ type: "AI_STATUS", data: text });
 
-    if (detectLoop(memory)) {
-      log("Loop detected. Stopping.");
-      break;
+  log("=== Agent Start ===");
+  log("User Prompt: " + msg.prompt);
+
+  try {
+
+    // --- AI初期化 ---
+    const model = await ensureModelReady(notify, log);
+    if (!model) {
+      log("AI初期化失敗");
+      return;
     }
 
-    if (!memory.visited.has(url)) {
+    const history = [];
+
+    for (let step = 0; step < 30; step++) {
+
+      log(`--- Step ${step} 開始 ---`);
+
+      // ループ検出
+      if (detectLoop(history)) {
+        log("Loop detected. 停止します");
+        break;
+      }
+
+      // AX Tree取得
+      log("AX: 取得開始");
       const ax = await getAXTree(tabId);
-      memory.addSummary(url, ax.slice(0, 20));
-      memory.addVisit(url);
+      log("AX: ノード数=" + ax.length);
+
+      // プロンプト構築
+      const prompt = buildPrompt(msg.prompt, ax);
+
+      // AI実行
+      const action = await runPrompt(model, prompt, log);
+
+      log("Action決定: " + JSON.stringify(action));
+
+      if (!action || action.type === "finish") {
+        log("finish受信 → 終了");
+        break;
+      }
+
+      // Action実行
+      log("Action実行開始");
+      await executeAction(tabId, action, log);
+      log("Action実行完了");
+
+      history.push(action);
+
+      // DOM安定待機
+      await waitForDomStable(tabId, log);
+
+      log(`--- Step ${step} 完了 ---`);
     }
 
-    const ax = await getAXTree(tabId);
-    const working = memory.buildWorkingMemory(url);
-
-    const prompt = buildPrompt(msg.prompt, ax, working);
-    const action = await runNano(prompt);
-
-    log(`Step ${step}: ${JSON.stringify(action)}`);
-
-    if (!action || !action.type) break;
-
-    const result = await retryAction(tabId, action, executeAction);
-
-    memory.addHistory(action, result);
-
-    if (action.type === "extract" && result[0]?.result) {
-      memory.addExtracted(result[0].result);
-    }
-
-    if (action.type === "finish") break;
-
-    await waitForDomStable(tabId);
+  } catch (e) {
+    log("例外発生: " + e.message);
   }
 
-  await memory.persist();
-  log("Finished.");
+  log("=== Agent Finished ===");
 });
 
-// AXTreeを取得する関数
+//ループ検出
+function detectLoop(history) {
+
+  if (history.length < 6) return false;
+
+  const recent = history.slice(-6);
+  const sig = recent.map(a => a.type + (a.selector || ""));
+
+  const unique = new Set(sig);
+
+  return unique.size <= 2;
+}
+
+//AX取得
 async function getAXTree(tabId) {
+
   try {
     await chrome.debugger.attach({ tabId }, "1.3");
   } catch {}
@@ -75,80 +121,45 @@ async function getAXTree(tabId) {
     .map(n => ({
       role: n.role.value,
       name: n.name?.value || ""
-    }))
-    .slice(0, 200);
+    }));
 }
 
-// アクションを実行する関数
-async function executeAction(tabId, action) {
+//Action実行
+async function executeAction(tabId, action, log) {
 
   if (action.type === "navigate") {
+    log("Navigate: " + action.url);
     await chrome.tabs.update(tabId, { url: action.url });
-    return { ok: true };
+    return;
   }
 
-  return chrome.scripting.executeScript({
+  const result = await chrome.scripting.executeScript({
     target: { tabId },
     func: (action) => {
 
       const el = document.querySelector(action.selector);
       if (!el) return "not found";
 
-      switch (action.type) {
+      if (action.type === "click") el.click();
 
-        case "click":
-          el.click();
-          break;
+      if (action.type === "input") {
+        el.focus();
+        el.value = action.text;
+        el.dispatchEvent(new Event("input", { bubbles: true }));
+      }
 
-        case "input":
-          el.focus();
-          el.value = action.text;
-          el.dispatchEvent(new Event("input", { bubbles: true }));
-          break;
+      if (action.type === "scroll") window.scrollBy(0, 800);
 
-        case "scroll":
-          window.scrollBy(0, action.direction === "down" ? 800 : -800);
-          break;
-
-        case "extract":
-          return [...document.querySelectorAll(action.selector)]
-            .slice(0, 10)
-            .map(e => ({ text: e.innerText }));
+      if (action.type === "extract") {
+        return [...document.querySelectorAll(action.selector)]
+          .slice(0, 10)
+          .map(e => e.innerText);
       }
 
       return "ok";
     },
     args: [action]
   });
-}
 
-// プロンプトを構築する関数
-function buildPrompt(userPrompt, axTree, memory) {
-  return `
-あなたはブラウザ自動操作エージェントです。
-必ず1つのActionのみをJSONで出力してください。
-
-# ユーザ指示
-${userPrompt}
-
-# Working Memory
-${JSON.stringify(memory)}
-
-# 画面構造（AX Tree簡略）
-${JSON.stringify(axTree)}
-
-# 使用可能Action
-click, input, scroll, navigate, extract, wait, finish
-
-例:
-{
-  "type": "click",
-  "selector": "a.article"
-}
-`;
-}
-
-// ログ出力を行う関数
-function log(text) {
-  chrome.runtime.sendMessage({ type: "LOG", data: text });
+  log("Action結果: " + JSON.stringify(result));
 }
