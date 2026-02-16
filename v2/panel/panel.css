@@ -1,0 +1,14 @@
+.memory-item {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 5px;
+}
+
+#logArea {
+  height: 200px;
+  overflow-y: auto;
+  background: #111;
+  color: #0f0;
+  padding: 5px;
+  font-size: 12px;
+}
