@@ -39,7 +39,8 @@ export async function ensureModelReady(notify, log) {
 
   const model = await LanguageModel.create({
     model: "gemini-nano",
-    temperature: 0.2
+    temperature: 0.2,
+    topK: 40
   });
 
   notify("モデル準備完了");
