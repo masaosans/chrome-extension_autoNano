@@ -1,9 +1,43 @@
-.memory-item {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 5px;
+body {
+  font-family: Arial, sans-serif;
+  margin: 10px;
 }
 
+h2 {
+  margin-top: 0;
+}
+
+/* ===== Prompt Area ===== */
+.prompt-container {
+  width: 100%;
+  margin-bottom: 15px;
+}
+
+#userInput {
+  width: 100%;
+  box-sizing: border-box;
+  resize: vertical;       /* 縦サイズ変更可能 */
+  min-height: 100px;      /* 約4行分 */
+  padding: 8px;
+  font-size: 14px;
+}
+
+#startBtn {
+  width: 100%;
+  margin-top: 8px;
+  padding: 8px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+/* ===== Status ===== */
+#status {
+  padding: 5px;
+  font-size: 13px;
+  margin-bottom: 10px;
+}
+
+/* ===== Logs ===== */
 #logArea {
   height: 200px;
   overflow-y: auto;
@@ -11,4 +45,23 @@
   color: #0f0;
   padding: 5px;
   font-size: 12px;
+  border-radius: 4px;
+}
+
+/* ===== Memory Items ===== */
+.memory-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+  padding: 6px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.memory-actions button {
+  margin-left: 5px;
+  font-size: 12px;
+  padding: 3px 6px;
+  cursor: pointer;
 }

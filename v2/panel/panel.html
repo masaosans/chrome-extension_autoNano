@@ -1,14 +1,17 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <meta charset="utf-8">
   <link rel="stylesheet" href="panel.css">
 </head>
 <body>
 
 <h2>Local Browser Agent</h2>
 
-<textarea id="userInput"></textarea>
-<button id="startBtn">Start</button>
+<div class="prompt-container">
+  <textarea id="userInput" rows="4" placeholder="ここに指示を入力..."></textarea>
+  <button id="startBtn">Start</button>
+</div>
 
 <h3>Status</h3>
 <div id="status"></div>
@@ -22,4 +25,3 @@
 <script type="module" src="panel.js"></script>
 </body>
 </html>
-

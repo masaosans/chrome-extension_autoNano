@@ -27,12 +27,16 @@ export async function getAXTree(tabId, log) {
 
 function simplifyAX(nodes) {
   return nodes
-    .filter(n => n.name?.value || n.role?.value)
+    .filter(n =>
+      !n.ignored &&
+      n.backendDOMNodeId &&   // ← 追加
+      n.name &&   // ← ネームが空なら対象外
+      (n.name?.value?.trim() || n.role?.value) 
+    )
     .map(n => ({
       role: n.role?.value,
-      name: n.name?.value,
-      ignored: n.ignored,
-      id: n.nodeId
+      name: n.name?.value?.trim(),
+      id: n.backendDOMNodeId //n.nodeId
     }))
-    .slice(0, 300); // トークン節約
+    .slice(0, 300);
 }

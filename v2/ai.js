@@ -29,7 +29,9 @@ export async function runAgentLoop(userInput, log) {
   const lm = await initModel(log);
 
   let loopCount = 0;
-  const maxLoops = 10;
+  const maxLoops = 15;
+
+  const actionHistory = [];
 
   while (loopCount < maxLoops) {
     loopCount++;
@@ -41,51 +43,92 @@ export async function runAgentLoop(userInput, log) {
     });
 
     try {
+
       const pageInfo = await getPageInfo(log);
       const memory = await readMemory();
 
-const prompt = `
-あなたはブラウザUIエージェントです。
+      const prompt = `
+あなたは自律型ブラウザUIエージェントです。
 
-以下はAX Treeです。
-role と name を使って操作対象を判断してください。
+# 現在のURL
+${pageInfo.url}
 
+# AX Tree
 ${JSON.stringify(pageInfo.axTree)}
 
-ユーザ指示:
+# 作業履歴
+${JSON.stringify(actionHistory)}
+
+# 保存済みメモ
+${JSON.stringify(memory)}
+
+# ユーザ指示
 ${userInput}
 
-可能なaction:
-click
-input
-navigate
-write_memory
+# 重要ルール
 
-必ず純粋なJSONのみ出力してください。
-markdownや\`\`\`は絶対に含めないでください。
+- 必ずJSON配列のみ出力
+- 1つだけでも必ず配列にする
+- 説明文は禁止
+- idは必ずAX Tree内のidを使う
+- elementフィールドは禁止
+- act_purposeには実施の目的・理由を日本語で明記する。
+
+
+# 利用可能なaction
+
+- click: { id , act_purpose }
+- input: { id, text, act_purpose }
+- navigate: { url, act_purpose }
+- write_memory: { text , act_purpose}
+- stop: { act_purpose}
+
+complete は処理完了時のみ使用する。
+stop は中断時に使用する。
+要約や文章の整理、収集の指示があった場合、結果をwrite_memoryに記録する。
+
 `;
 
-      log({ level: "debug", message: "Sending prompt to model..." });
-
       log({ level: "info", message: prompt });
+ 
+      log({ level: "debug", message: "Sending prompt to model..." });
 
       const result = await lm.prompt(prompt);
 
-      log({ level: "info", message: result });
-
-      //```json {ｘｘｘｘ}　```の前後をトリム
       const parsed = extractJSON(result);
 
-      log({
-        level: "info",
-        message: `Executing action: ${parsed.action?.type}`
-      });
-
-      const done = await executeAction(parsed.action, log);
-
-      if (done === "STOP") {
-        log({ level: "info", message: "Agent stopped by action" });
+      if (!Array.isArray(parsed)) {
+        log({ level: "error", message: "Model output is not array" });
         break;
+      }
+
+      for (const action of parsed) {
+
+        log({
+          level: "info",
+          message: `Executing action: ${JSON.stringify(action)}`
+        });
+
+        actionHistory.push({
+          loop: loopCount,
+          action
+        });
+
+        if (action.action === "complete") {
+          log({ level: "info", message: "Task completed by model." });
+          return;
+        }
+
+        if (action.action === "stop") {
+          log({ level: "info", message: "Task stopped by model." });
+          return;
+        }
+
+        const result = await executeAction(action, log);
+
+        if (result === "STOP") {
+          return;
+        }
       }
 
     } catch (e) {
@@ -94,7 +137,10 @@ markdownや\`\`\`は絶対に含めないでください。
     }
   }
 
-  log({ level: "info", message: `[${traceId}] Loop ended`, time: now() });
+  log({
+    level: "warn",
+    message: `[${traceId}] Max loop reached`
+  });
 }
 
 async function getPageInfo(log) {
@@ -122,13 +168,7 @@ function extractJSON(text) {
     .replace(/```/g, "")
     .trim();
 
-  // 最初の { から最後の } まで抽出
-  const start = cleaned.indexOf("{");
-  const end = cleaned.lastIndexOf("}");
-
-  if (start === -1 || end === -1) return null;
-
-  const jsonString = cleaned.slice(start, end + 1);
+    const jsonString = cleaned
 
   try {
     return JSON.parse(jsonString);

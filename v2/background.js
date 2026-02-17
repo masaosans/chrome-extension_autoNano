@@ -2,6 +2,15 @@ console.log("BACKGROUND LOADED");
 
 import { runAgentLoop } from "./ai.js";
 
+//サイドバーを開く
+chrome.action.onClicked.addListener(async (tab) => {
+  if (!tab?.id) return;
+
+  await chrome.sidePanel.open({
+    tabId: tab.id
+  });
+});
+
 function logToPanel(data) {
   chrome.runtime.sendMessage({
     type: "AGENT_LOG",
