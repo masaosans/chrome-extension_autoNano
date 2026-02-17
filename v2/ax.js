@@ -30,7 +30,7 @@ function simplifyAX(nodes) {
     .filter(n =>
       !n.ignored &&
       n.backendDOMNodeId &&   // ← 追加
-      n.name &&   // ← ネームが空なら対象外
+      n.name?.value?.trim() &&   // ← ネームが空なら対象外
       (n.name?.value?.trim() || n.role?.value) 
     )
     .map(n => ({

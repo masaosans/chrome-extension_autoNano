@@ -65,6 +65,23 @@ ${JSON.stringify(memory)}
 # ユーザ指示
 ${userInput}
 
+
+# 出力形式（厳守）
+
+あなたの出力は「純粋なJSON配列のみ」です。
+説明文、前置き、コードブロック、などは絶対に出力してはいけません。
+必ず以下の形式のJSON配列のみを出力してください。
+
+[
+  {
+    "action": "click",
+    "params": { 
+        "id": "AX Treeのid",
+        "act_purpose" : "処理の目的・理由"
+    }
+  }
+]
+
 # 重要ルール
 
 - 必ずJSON配列のみ出力
@@ -77,14 +94,14 @@ ${userInput}
 
 # 利用可能なaction
 
-- click: { id , act_purpose }
+- click: { id, act_purpose }
 - input: { id, text, act_purpose }
 - navigate: { url, act_purpose }
-- write_memory: { text , act_purpose}
-- stop: { act_purpose}
+- write_memory: { text, act_purpose }
+- stop: { act_purpose }
 
-complete は処理完了時のみ使用する。
-stop は中断時に使用する。
+click、input、navigateはブラウザを操作するaction。
+stop は処理を完了する際に使用する。
 要約や文章の整理、収集の指示があった場合、結果をwrite_memoryに記録する。
 
 `;
