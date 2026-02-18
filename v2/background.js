@@ -1,6 +1,8 @@
 console.log("BACKGROUND LOADED");
 
 import { runAgentLoop } from "./ai.js";
+import { deleteMemory } from "./memory.js";
+import { requestStop } from "./ai.js";
 
 //サイドバーを開く
 chrome.action.onClicked.addListener(async (tab) => {
@@ -36,4 +38,36 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
     return true;
   }
+  //メモ削除処理
+  if (msg.type === "DELETE_MEMORY") {
+    deleteMemory(msg.id).then(() => {
+      sendResponse({ ok: true });
+    });
+
+    return true; // 非同期レスポンス用
+  }
+  //停止指示
+  if (msg.type === "STOP_AGENT") {
+    requestStop();
+  }
+
 });
+
+//DOM監視
+async function waitForDomStable(tabId) {
+  return new Promise((resolve) => {
+    const listener = (msg, sender) => {
+      if (msg.type === "DOM_STABLE" && sender.tab?.id === tabId) {
+        chrome.runtime.onMessage.removeListener(listener);
+        resolve();
+      }
+    };
+
+    chrome.runtime.onMessage.addListener(listener);
+
+    chrome.scripting.executeScript({
+      target: { tabId },
+      files: ["dom-waiter.js"]
+    });
+  });
+}

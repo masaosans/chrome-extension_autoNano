@@ -22,8 +22,21 @@ h2 {
   font-size: 14px;
 }
 
+.btn-container {
+    display: flex;          /* 横並びにする */
+    gap: 10px;               /* ボタン間の余白 */
+}
+
 #startBtn {
-  width: 100%;
+  width: 50%;
+  margin-top: 8px;
+  padding: 8px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+#stopBtn {
+  width: 50%;
   margin-top: 8px;
   padding: 8px;
   font-size: 14px;

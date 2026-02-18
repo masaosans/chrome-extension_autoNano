@@ -3,18 +3,31 @@ const statusDiv = document.getElementById("status");
 const memoryList = document.getElementById("memoryList");
 
 document.getElementById("startBtn").onclick = async () => {
-  statusDiv.textContent = "Running...";
   await chrome.runtime.sendMessage({
     type: "START_AGENT",
     userInput: document.getElementById("userInput").value
   });
 };
 
+
 chrome.runtime.onMessage.addListener((msg) => {
+  //ステータス変更時
+  if (msg.type === "AGENT_STATUS") {
+      statusDiv.textContent = msg.status;
+  }
+
+  //ログ取得時
   if (msg.type === "AGENT_LOG") {
     const line = `[${msg.payload.level}] ${msg.payload.message}\n`;
     logArea.textContent += line;
     logArea.scrollTop = logArea.scrollHeight;
+  }
+});
+
+// 追加：storage変更監視
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area === "local" && changes.agentMemory) {
+    renderMemory();
   }
 });
 
@@ -48,7 +61,6 @@ async function renderMemory() {
         type: "DELETE_MEMORY",
         id: m.id
       });
-      renderMemory();
     };
 
     div.appendChild(icon);
@@ -58,5 +70,12 @@ async function renderMemory() {
     memoryList.appendChild(div);
   });
 }
+
+//停止指示ボタン
+document.getElementById("stopBtn").onclick = async () => {
+  await chrome.runtime.sendMessage({
+    type: "STOP_AGENT"
+  });
+};
 
 renderMemory();
