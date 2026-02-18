@@ -87,12 +87,12 @@ export async function runAgentLoop(userInput, log) {
       const prompt = `
 あなたは自律型ブラウザUIエージェントです。
 複数のターンを繰り返し、[ユーザ指示]を実現することが目的です。
-[作業履歴]から現在の作業状況、このあと実施する作業を整理し、現在のページ（AX tree）で実施するactionを返答してください。
+あなたの使命は、[作業履歴]から現在の作業状況を把握し、[現在のページ内容]で実施実施できる作業を確認し、次の作業をJSONで指示することです。
 
 # 現在のURL
 ${pageInfo.url}
 
-# AX Tree（現在のページのAX tree）
+# 現在のページ内容
 ${JSON.stringify(pageInfo.axTree)}
 
 # 作業履歴
@@ -123,22 +123,30 @@ ${userInput}
 # 重要ルール
 
 - actionが1つだけでも必ず配列にする。
-- idは必ずAX Tree内のidを使う。
+- [現在のページ内容]で実施できるactionを指定する。
+- [現在のページ内容]に含まれないidの利用は禁止。
 - act_purposeにはactionを実施する目的、理由を日本語で明記する。
-- 現在のページで実施できるactionのみ返答する。
 - click、navigateなどのactionでページ遷移が起こる場合、以降のactionは指示しない。
+- [作業履歴]のresult（success/failed）、urlChanged（ページ遷移したか）を踏まえ、actionを指示する。繰り返しfailedすることは避ける。
 
 # 利用可能なaction
 
 - click: { id, act_purpose }
 - input: { id, text, act_purpose }
+- submit: { id, act_purpose }
+- history_back: { act_purpose }
 - navigate: { url, act_purpose }
 - write_memory: { text, act_purpose }
 - stop: { act_purpose }
 
-ブラウザを操作：click、input、navigateのactionを利用
-要約、文章収集、質問回答：write_memoryを利用。応答内容をtextに設定しactionする。
-作業終了：stopを利用。[ユーザ指示]の内容が[作業履歴]で終わっていると判断した場合、stop のactionを行う。
+[How To Use]
+cliick: button,linkなど各要素をクリックする際に利用する
+input: "textbox", "searchbox","combobox", "spinbutton"にtextで指定した値を入力する
+submit: 入力後、submitする場合に利用。ボタンがない場合に利用。検索窓など、inputしたidを対象にする。
+history_back: 遷移前のページに戻る。一覧からの連続処理時、処理を誤ったときに利用する。
+navigate: 指定したurlページに遷移する
+write_memory: textをメモリに保存する。要約、文章収集、質問回答などユーザに渡す唯一の方法。
+stop: 作業終了。[ユーザ指示]の内容が[作業履歴]で終わっていると判断した場合、stop のactionを行う。
 
 `;
 
@@ -148,7 +156,10 @@ ${userInput}
 
       const result = await lm.prompt(prompt);
 
+      log({ level: "info", message: result });
+ 
       const parsed = extractJSON(result);
+
 
       if (!Array.isArray(parsed)) {
         log({ level: "error", message: "Model output is not array" });

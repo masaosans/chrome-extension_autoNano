@@ -1,7 +1,20 @@
 const logArea = document.getElementById("logArea");
 const statusDiv = document.getElementById("status");
 const memoryList = document.getElementById("memoryList");
+const copyBtn = document.getElementById("copyLogs");
 
+//ログコピー
+copyBtn.onclick = async () => {
+  await navigator.clipboard.writeText(logArea.textContent);
+
+  copyBtn.classList.add("copied");
+
+  setTimeout(() => {
+    copyBtn.classList.remove("copied");
+  }, 1000);
+};
+
+//スタートボタン
 document.getElementById("startBtn").onclick = async () => {
   await chrome.runtime.sendMessage({
     type: "START_AGENT",
@@ -42,6 +55,8 @@ async function renderMemory() {
 
     const icon = document.createElement("span");
     icon.textContent = "📄 " + m.title;
+    // ★ 追加
+    icon.title = m.content;
 
     const download = document.createElement("button");
     download.textContent = "Download";
@@ -63,11 +78,33 @@ async function renderMemory() {
       });
     };
 
+    icon.onmouseenter = (e) => {
+      const tooltip = document.createElement("div");
+      tooltip.className = "memory-tooltip";
+      tooltip.textContent = m.content;
+
+      document.body.appendChild(tooltip);
+
+      const rect = icon.getBoundingClientRect();
+      tooltip.style.top = rect.bottom + 5 + "px";
+      tooltip.style.left = rect.left + "px";
+
+      icon._tooltip = tooltip;
+    };
+
+    icon.onmouseleave = () => {
+      if (icon._tooltip) {
+        icon._tooltip.remove();
+        icon._tooltip = null;
+      }
+    };
+
     div.appendChild(icon);
     div.appendChild(download);
     div.appendChild(del);
 
     memoryList.appendChild(div);
+
   });
 }
 

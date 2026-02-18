@@ -34,8 +34,9 @@ function simplifyAX(nodes) {
       (n.name?.value?.trim() || n.role?.value) 
     )
     .map(n => ({
-      role: n.role?.value,
-      name: n.name?.value?.trim(),
+      //role: n.role?.value,
+      //name: n.name?.value?.trim(),
+      [n.role.value]: n.name?.value?.trim(),//要素圧縮
       id: n.backendDOMNodeId //n.nodeId
     }))
     .slice(0, 300);

@@ -65,30 +65,37 @@ export async function executeAction(action, log) {
             functionDeclaration: `
               function() {
 
-                function findLink(el) {
-                  if (!el) return null;
+                function dispatchRealClick(el) {
+                  if (!el) return false;
 
-                  if (el.tagName === 'A' && el.href)
-                    return el;
+                  const rect = el.getBoundingClientRect();
+                  const x = rect.left + rect.width / 2;
+                  const y = rect.top + rect.height / 2;
 
-                  return el.closest ? el.closest('a[href]') : null;
+                  ['mousedown', 'mouseup', 'click'].forEach(type => {
+                    el.dispatchEvent(new MouseEvent(type, {
+                      view: window,
+                      bubbles: true,
+                      cancelable: true,
+                      clientX: x,
+                      clientY: y
+                    }));
+                  });
+
+                  return true;
                 }
 
-                // 1. 自分 or 祖先からリンクを探す
-                const link = findLink(this);
-
-                if (link && link.href) {
-                  window.location.href = link.href;
-                  return;
-                }
-
-                // 2. ボタンなどは通常クリック
                 function isClickable(el) {
                   if (!el) return false;
 
+                  if (el.tagName === 'A' && el.href) return true;
                   if (el.tagName === 'BUTTON') return true;
-                  if (el.getAttribute && el.getAttribute('role') === 'button') return true;
-                  if (typeof el.onclick === 'function') return true;
+                  if (el.tagName === 'INPUT' &&
+                    ['button','submit','checkbox','radio'].includes(el.type)) return true;
+
+                  if (el.getAttribute?.('role') === 'button') return true;
+
+                  if (el.tabIndex >= 0) return true;
 
                   const style = window.getComputedStyle(el);
                   if (style.cursor === 'pointer') return true;
@@ -96,21 +103,17 @@ export async function executeAction(action, log) {
                   return false;
                 }
 
-                if (isClickable(this)) {
-                  this.click();
-                  return;
-                }
-
-                let el = this.parentElement;
+                // 自分から祖先へ探索
+                let el = this;
                 while (el) {
                   if (isClickable(el)) {
-                    el.click();
-                    return;
+                    return dispatchRealClick(el);
                   }
                   el = el.parentElement;
                 }
 
-                this.click();
+                // 最後の保険
+                return dispatchRealClick(this);
               }
             `
           }
@@ -151,21 +154,51 @@ export async function executeAction(action, log) {
             functionDeclaration: `
               function(text) {
 
-                if (this.tagName !== 'INPUT' && this.tagName !== 'TEXTAREA') {
-                  let el = this.querySelector('input, textarea');
-                  if (el) {
-                    el.value = text;
-                    el.dispatchEvent(new Event('input', { bubbles: true }));
-                    el.dispatchEvent(new Event('change', { bubbles: true }));
-                    return;
-                  }
+                function findInput(el) {
+                  if (!el) return null;
+
+                  if (
+                    el.tagName === 'INPUT' ||
+                    el.tagName === 'TEXTAREA'
+                  ) return el;
+
+                  if (el.isContentEditable) return el;
+
+                  return el.querySelector?.('input, textarea, [contenteditable="true"]');
                 }
 
-                this.value = text;
-                this.dispatchEvent(new Event('input', { bubbles: true }));
-                this.dispatchEvent(new Event('change', { bubbles: true }));
+                const inputEl = findInput(this);
+                if (!inputEl) return;
+
+                if (inputEl.disabled || inputEl.readOnly) return;
+
+                inputEl.focus();
+
+                // React対策：native setterを使う
+                const descriptor = Object.getOwnPropertyDescriptor(
+                  inputEl.__proto__,
+                  'value'
+                );
+
+                if (descriptor && descriptor.set) {
+                  descriptor.set.call(inputEl, text);
+                } else {
+                  inputEl.value = text;
+                }
+
+                // contenteditable対応
+                if (inputEl.isContentEditable) {
+                  inputEl.textContent = text;
+                }
+
+                // 疑似キーボードイベント
+                ['keydown','keypress','input','keyup','change'].forEach(type => {
+                  inputEl.dispatchEvent(new Event(type, { bubbles: true }));
+                });
+
+                return true;
               }
-            `,
+           `,
             arguments: [{ value: params.text }]
           }
         );
@@ -173,7 +206,146 @@ export async function executeAction(action, log) {
         log({ level: "debug", message: "Input executed" });
         break;
       }
+      // =========================
+      // submit
+      // =========================
+      case "submit": {
 
+        if (!params.id) {
+          log({ level: "error", message: "Submit missing AX id" });
+          break;
+        }
+
+        const backendNodeId = parseInt(params.id);
+
+        log({
+          level: "info",
+          message: `Submit requested backendNodeId=${backendNodeId}`
+        });
+
+        const { object } = await chrome.debugger.sendCommand(
+          debuggee,
+          "DOM.resolveNode",
+          { backendNodeId }
+        );
+
+        await chrome.debugger.sendCommand(
+          debuggee,
+          "Runtime.callFunctionOn",
+          {
+            objectId: object.objectId,
+            functionDeclaration: `
+              function() {
+
+                function findForm(el) {
+                  if (!el) return null;
+                  if (el.tagName === 'FORM') return el;
+                  return el.closest ? el.closest('form') : null;
+                }
+
+                const form = findForm(this);
+
+                // 1 requestSubmit (最も自然)
+                if (form && typeof form.requestSubmit === 'function') {
+                  form.requestSubmit();
+                  return "requestSubmit";
+                }
+
+                // 2 submitボタンを探してクリック
+                if (form) {
+                  const btn = form.querySelector(
+                    'button[type="submit"], input[type="submit"]'
+                  );
+                  if (btn) {
+                    btn.click();
+                    return "buttonClick";
+                  }
+                }
+
+                // 3 Enterキー疑似送信
+                const el = this;
+                if (el) {
+                  el.dispatchEvent(new KeyboardEvent('keydown', {
+                    key: 'Enter',
+                    code: 'Enter',
+                    bubbles: true
+                  }));
+                  el.dispatchEvent(new KeyboardEvent('keyup', {
+                    key: 'Enter',
+                    code: 'Enter',
+                    bubbles: true
+                  }));
+                  return "enterKey";
+                }
+
+                // 4 最終手段
+                if (form) {
+                  form.submit();
+                  return "submitDirect";
+                }
+
+                return "noForm";
+              }
+            `
+          }
+        );
+
+        log({ level: "debug", message: "Submit executed" });
+        break;
+      }
+      
+      // =========================
+      // history_back
+      // =========================
+      case "history_back": {
+
+        log({
+          level: "info",
+          message: "History back requested"
+        });
+
+        await chrome.debugger.sendCommand(
+          debuggee,
+          "Runtime.evaluate",
+          {
+            expression: `
+              (function() {
+
+                return new Promise((resolve) => {
+
+                  let resolved = false;
+
+                  function done(type) {
+                    if (!resolved) {
+                      resolved = true;
+                      resolve(type);
+                    }
+                  }
+
+                  // popstateを監視（SPA対応）
+                  window.addEventListener("popstate", () => {
+                    done("popstate");
+                  }, { once: true });
+
+                  // 通常の戻る
+                  if (window.history.length > 1) {
+                    window.history.back();
+                    setTimeout(() => done("historyBack"), 1500);
+                  } else {
+                    done("noHistory");
+                  }
+
+                });
+
+              })();
+            `
+          }
+        );
+
+        log({ level: "debug", message: "History back executed" });
+
+        break;
+      }
       // =========================
       // NAVIGATE
       // =========================

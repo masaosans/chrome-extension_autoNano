@@ -61,6 +61,37 @@ h2 {
   border-radius: 4px;
 }
 
+.log-wrapper {
+  position: relative;
+}
+
+.copy-btn {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 6px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.log-wrapper:hover .copy-btn {
+  opacity: 1;
+}
+
+.copy-btn::before {
+  content: "📋";
+  font-size: 14px;
+}
+
+.copy-btn.copied::before {
+  content: "✔";
+}
+
 /* ===== Memory Items ===== */
 .memory-item {
   display: flex;
@@ -77,4 +108,17 @@ h2 {
   font-size: 12px;
   padding: 3px 6px;
   cursor: pointer;
+}
+
+.memory-tooltip {
+  position: absolute;
+  background: #222;
+  color: #fff;
+  padding: 8px;
+  border-radius: 6px;
+  max-width: 400px;
+  white-space: pre-wrap;
+  font-size: 12px;
+  z-index: 9999;
+  box-shadow: 0 0 10px rgba(0,0,0,0.5);
 }
