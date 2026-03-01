@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="panel.css">
+</head>
+<body>
+
+<h2>Local Browser Agent</h2>
+
+<div class="prompt-container">
+  <textarea id="userInput" rows="4" placeholder="ここに指示を入力..."></textarea>
+</div>
+<div class="btn-container">
+  <button id="startBtn">開始</button>
+  <button id="stopBtn">停止依頼</button>
+</div>
+
+
+
+
+<h3>Status</h3>
+<div id="status"></div>
+
+<h3>Logs</h3>
+<div class="log-wrapper">
+  <pre id="logArea"></pre>
+  <button id="copyLogs" class="copy-btn" title="Copy"></button>
+</div>
+
+<h3>Memory Files</h3>
+<div id="memoryList"></div>
+
+<script type="module" src="panel.js"></script>
+</body>
+</html>

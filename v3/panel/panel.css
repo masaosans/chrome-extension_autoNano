@@ -1,0 +1,124 @@
+body {
+  font-family: Arial, sans-serif;
+  margin: 10px;
+}
+
+h2 {
+  margin-top: 0;
+}
+
+/* ===== Prompt Area ===== */
+.prompt-container {
+  width: 100%;
+  margin-bottom: 15px;
+}
+
+#userInput {
+  width: 100%;
+  box-sizing: border-box;
+  resize: vertical;       /* 縦サイズ変更可能 */
+  min-height: 100px;      /* 約4行分 */
+  padding: 8px;
+  font-size: 14px;
+}
+
+.btn-container {
+    display: flex;          /* 横並びにする */
+    gap: 10px;               /* ボタン間の余白 */
+}
+
+#startBtn {
+  width: 50%;
+  margin-top: 8px;
+  padding: 8px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+#stopBtn {
+  width: 50%;
+  margin-top: 8px;
+  padding: 8px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+/* ===== Status ===== */
+#status {
+  padding: 5px;
+  font-size: 13px;
+  margin-bottom: 10px;
+}
+
+/* ===== Logs ===== */
+#logArea {
+  height: 200px;
+  overflow-y: auto;
+  background: #111;
+  color: #0f0;
+  padding: 5px;
+  font-size: 12px;
+  border-radius: 4px;
+}
+
+.log-wrapper {
+  position: relative;
+}
+
+.copy-btn {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 6px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.log-wrapper:hover .copy-btn {
+  opacity: 1;
+}
+
+.copy-btn::before {
+  content: "📋";
+  font-size: 14px;
+}
+
+.copy-btn.copied::before {
+  content: "✔";
+}
+
+/* ===== Memory Items ===== */
+.memory-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+  padding: 6px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.memory-actions button {
+  margin-left: 5px;
+  font-size: 12px;
+  padding: 3px 6px;
+  cursor: pointer;
+}
+
+.memory-tooltip {
+  position: absolute;
+  background: #222;
+  color: #fff;
+  padding: 8px;
+  border-radius: 6px;
+  max-width: 400px;
+  white-space: pre-wrap;
+  font-size: 12px;
+  z-index: 9999;
+  box-shadow: 0 0 10px rgba(0,0,0,0.5);
+}
